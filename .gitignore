@@ -1,0 +1,15 @@
+*.pyc
+.vagrant
+*.egg-info
+build
+.tox
+flycheck-*
+flycheck_*
+dist
+.coverage
+.env
+.cache
+.DS_Store
+htmlcov
+TAGS
+.eggs
