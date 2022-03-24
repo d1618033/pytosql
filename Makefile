@@ -8,4 +8,5 @@ check_format:
 
 lint:
 	pylint pytosql tests
-	mypy pytosql tests
+	mypy --install-types --non-interactive pytosql
+
