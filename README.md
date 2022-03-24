@@ -1,6 +1,7 @@
 pytosql: A python to sqlalchemy converter
 ==========================================
 
+"It's just sql with extra steps!"
 
 ## Installation
 
