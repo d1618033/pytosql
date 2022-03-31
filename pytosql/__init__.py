@@ -53,8 +53,12 @@ class _QueryVisitor(ast.NodeVisitor):
         self.conditions.append(condition)
 
 
-def python_to_sqlalchemy(table, query):
+def python_to_sqlalchemy_conditions(table, query):
     tree = ast.parse(query, mode="eval")
     visitor = _QueryVisitor(table)
     visitor.visit(tree)
-    return select(table).where(*visitor.conditions)
+    return visitor.conditions
+
+
+def python_to_sqlalchemy(table, query):
+    return select(table).where(*python_to_sqlalchemy_conditions(table, query))
