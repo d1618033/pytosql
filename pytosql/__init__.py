@@ -4,6 +4,14 @@ import typing
 from sqlalchemy import and_, or_, select
 
 
+class PyToSQLException(Exception):
+    pass
+
+
+class PyToSQLParsingError(PyToSQLException):
+    pass
+
+
 class _QueryVisitor(ast.NodeVisitor):
     def __init__(self, table):
         self.table = table
@@ -54,7 +62,10 @@ class _QueryVisitor(ast.NodeVisitor):
 
 
 def python_to_sqlalchemy_conditions(table, query):
-    tree = ast.parse(query, mode="eval")
+    try:
+        tree = ast.parse(query, mode="eval")
+    except SyntaxError as e:
+        raise PyToSQLParsingError(f"Invalid syntax in query `{query}`: {e.msg}") from e
     visitor = _QueryVisitor(table)
     visitor.visit(tree)
     return visitor.conditions
