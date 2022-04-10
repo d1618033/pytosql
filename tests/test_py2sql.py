@@ -95,6 +95,6 @@ def test_python_to_sqlalchemy(session, resources, query, expected):
 
 
 def test_syntax_error(session):
-    expected = "Invalid syntax in query `name == 'hi`: EOL while scanning string literal"
+    expected = "Invalid syntax in query `name == 'hi`: "
     with pytest.raises(pytosql.PyToSQLParsingError, match=expected):
         pytosql.python_to_sqlalchemy(Resource, "name == 'hi")
