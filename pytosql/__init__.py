@@ -24,13 +24,13 @@ class _QueryVisitor(ast.NodeVisitor):
         for possible in self._get_sides_of_compare(node):
             if isinstance(possible, ast.Name):
                 return possible.id
-        raise SyntaxError(f"Node {node} does not have a name")
+        raise PyToSQLParsingError(f"Node {node} does not have a name")
 
     def _get_value(self, node: ast.Compare) -> str:
         for possible in self._get_sides_of_compare(node):
             if isinstance(possible, ast.Constant):
                 return possible.value
-        raise SyntaxError(f"Node {node} does not have a value")
+        raise PyToSQLParsingError(f"Node {node} does not have a value")
 
     def generic_visit(self, node):
         if not isinstance(node, (ast.Expression, ast.BoolOp, ast.Or, ast.And, ast.Constant)):
@@ -42,6 +42,8 @@ class _QueryVisitor(ast.NodeVisitor):
             op = or_
         elif isinstance(node.op, ast.And):
             op = and_
+        else:
+            raise PyToSQLParsingError(f"Unsupported bool operation {node.op}")
         self.generic_visit(node)
         condition = op(*self.conditions)
         self.conditions = [condition]
@@ -58,6 +60,8 @@ class _QueryVisitor(ast.NodeVisitor):
             condition = column.any(name=value)
         elif isinstance(node.ops[0], ast.NotIn):
             condition = ~column.any(name=value)
+        else:
+            raise PyToSQLParsingError(f"Unsupported operation {node.ops[0]}")
         self.conditions.append(condition)
 
 
