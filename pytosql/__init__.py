@@ -34,7 +34,7 @@ class _QueryVisitor(ast.NodeVisitor):
 
     def generic_visit(self, node):
         if not isinstance(node, (ast.Expression, ast.BoolOp, ast.Or, ast.And, ast.Constant)):
-            raise SyntaxError(f"Unsupported node {node}")
+            raise PyToSQLParsingError(f"Unsupported node {node}")
         super().generic_visit(node)
 
     def visit_BoolOp(self, node: ast.BoolOp):
