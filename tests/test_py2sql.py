@@ -71,6 +71,7 @@ def resources(session, labels):
         ("'L2' in labels", ["R2"]),
         ("'C' in labels", ["R1", "R2"]),
         ("'L1' not in labels", ["R2"]),
+        ("not ('L1' in labels)", ["R2"]),
         ("'L2' not in labels", ["R1"]),
         ("'C' not in labels", []),
         ("name == 'R1'", ["R1"]),
@@ -86,6 +87,11 @@ def resources(session, labels):
             "(name == 'R1' and ('L2' in labels or 'C' in labels)) and 'L1' in labels",
             ["R1"],
         ),
+        ("not (name == 'R1' and 'L2' in labels)", ["R1", "R2"]),
+        ("not (name == 'R1')", ["R2"]),
+        ("not (name == 'R1' or 'L2' in labels)", []),
+        ("not (name == 'R1' or 'L1' in labels) and name == 'R2'", ["R2"]),
+        ("name == 'R2' and (not (name == 'R1' or 'L1' in labels))", ["R2"]),
     ],
 )
 def test_python_to_sqlalchemy(session, resources, query, expected):
