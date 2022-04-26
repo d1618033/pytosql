@@ -3,7 +3,22 @@ import typing
 
 from sqlalchemy import and_, not_, or_, select
 
-_SUPPORTED_NODES = (ast.Expression, ast.BoolOp, ast.Or, ast.And, ast.Constant, ast.UnaryOp, ast.Not)
+_SUPPORTED_NODES = (
+    ast.Eq,
+    ast.NotEq,
+    ast.In,
+    ast.NotIn,
+    ast.Load,
+    ast.Expression,
+    ast.Name,
+    ast.Compare,
+    ast.BoolOp,
+    ast.Or,
+    ast.And,
+    ast.Constant,
+    ast.UnaryOp,
+    ast.Not,
+)
 
 
 class PyToSQLException(Exception):
@@ -17,7 +32,6 @@ class PyToSQLParsingError(PyToSQLException):
 class _QueryVisitor(ast.NodeVisitor):
     def __init__(self, table):
         self.table = table
-        self.conditions = []
 
     def _get_sides_of_compare(self, node: ast.Compare):
         return node.left, node.comparators[0]
@@ -34,11 +48,6 @@ class _QueryVisitor(ast.NodeVisitor):
                 return possible.value
         raise PyToSQLParsingError(f"Node {node} does not have a value")
 
-    def generic_visit(self, node):
-        if not isinstance(node, _SUPPORTED_NODES):
-            raise PyToSQLParsingError(f"Unsupported node {node}")
-        super().generic_visit(node)
-
     def visit_BoolOp(self, node: ast.BoolOp):
         if isinstance(node.op, ast.Or):
             op = or_
@@ -46,18 +55,18 @@ class _QueryVisitor(ast.NodeVisitor):
             op = and_
         else:
             raise PyToSQLParsingError(f"Unsupported bool operation {node.op}")
-        self.generic_visit(node)
-        condition = op(*self.conditions)
-        self.conditions = [condition]
+        conditions = []
+        for value in node.values:
+            conditions.append(self.visit(value))
+        return op(*conditions)
 
     def visit_UnaryOp(self, node: ast.UnaryOp):
         if isinstance(node.op, ast.Not):
             op = not_
         else:
             raise PyToSQLParsingError(f"Unsupported unary operation {node.op}")
-        self.generic_visit(node)
-        condition = op(*self.conditions)
-        self.conditions = [condition]
+        condition = self.visit(node.operand)
+        return op(condition)
 
     def visit_Compare(self, node: ast.Compare):
         field = self._get_field(node)
@@ -73,7 +82,10 @@ class _QueryVisitor(ast.NodeVisitor):
             condition = ~column.any(name=value)
         else:
             raise PyToSQLParsingError(f"Unsupported operation {node.ops[0]}")
-        self.conditions.append(condition)
+        return condition
+
+    def visit_Expression(self, node: ast.Expression):
+        return [self.visit(node.body)]
 
 
 def python_to_sqlalchemy_conditions(table, query):
@@ -82,8 +94,8 @@ def python_to_sqlalchemy_conditions(table, query):
     except SyntaxError as e:
         raise PyToSQLParsingError(f"Invalid syntax in query `{query}`: {e.msg}") from e
     visitor = _QueryVisitor(table)
-    visitor.visit(tree)
-    return visitor.conditions
+    conditions = visitor.visit(tree)
+    return conditions
 
 
 def python_to_sqlalchemy(table, query):
