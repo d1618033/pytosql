@@ -24,10 +24,22 @@ See tests for a full example. This is just an illustration:
 
     from pytosql import python_to_sqlalchemy
 
-    query = python_to_sqlalchemy(Resource, "name == 'R1' and ('L2' in labels or 'C' in labels) and 'L1' in labels")
+    labels = [Label(name="L1"), Label(name="L2"), Label(name="C")]
+    session.add_all(labels)
+    session.add_all([
+        Resource(name="R1", labels=[labels[0], labels[2]]),
+        Resource(name="R2", labels=[labels[1], labels[2]]),
+    ])
+    session.commit()
+
+    query = python_to_sqlalchemy(
+        Resource, 
+        "name == 'R1' and ('L2' in labels or 'C' in labels) and 'L1' in labels"
+    )
     for resource in session.scalars(query):
         print(resource)
-
+    # prints:
+    # R1
 
 
 

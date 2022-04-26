@@ -1,7 +1,9 @@
 import ast
 import typing
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, not_, or_, select
+
+_SUPPORTED_NODES = (ast.Expression, ast.BoolOp, ast.Or, ast.And, ast.Constant, ast.UnaryOp, ast.Not)
 
 
 class PyToSQLException(Exception):
@@ -33,7 +35,7 @@ class _QueryVisitor(ast.NodeVisitor):
         raise PyToSQLParsingError(f"Node {node} does not have a value")
 
     def generic_visit(self, node):
-        if not isinstance(node, (ast.Expression, ast.BoolOp, ast.Or, ast.And, ast.Constant)):
+        if not isinstance(node, _SUPPORTED_NODES):
             raise PyToSQLParsingError(f"Unsupported node {node}")
         super().generic_visit(node)
 
@@ -44,6 +46,15 @@ class _QueryVisitor(ast.NodeVisitor):
             op = and_
         else:
             raise PyToSQLParsingError(f"Unsupported bool operation {node.op}")
+        self.generic_visit(node)
+        condition = op(*self.conditions)
+        self.conditions = [condition]
+
+    def visit_UnaryOp(self, node: ast.UnaryOp):
+        if isinstance(node.op, ast.Not):
+            op = not_
+        else:
+            raise PyToSQLParsingError(f"Unsupported unary operation {node.op}")
         self.generic_visit(node)
         condition = op(*self.conditions)
         self.conditions = [condition]
